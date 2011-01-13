@@ -1,0 +1,62 @@
+{% extends "wrapper.html" %}
+
+{% block title %}
+{% endblock %}
+
+{% block meta %}
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+{% endblock %}
+
+{% block sytle %}
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript" charset="utf-8" src="/static/js/geohash.js"></script>
+<script type="text/javascript">
+google.load("maps","3", {"other_params":"sensor=true"});
+$(function(){
+  var myOptions = {
+    zoom: 18,
+    center: new google.maps.LatLng(35.68,139.76),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  var map = new google.maps.Map(document.getElementById("map"),myOptions); 
+  var geohashes = [{% for point in points %}'{{point.geohash|escape}}',{% endfor %}];
+  var pathPoints = [];
+  for (var i = 0, len = geohashes.length ; i < len ; i++) {
+    var geohash = geohashes[i];
+    if (geohash && geohash.length) { 
+      var data = decodeGeoHash(geohash);
+      var latlng = new google.maps.LatLng(data.latitude[2], data.longitude[2]);
+      pathPoints.push(latlng);
+    }
+  }
+  if (pathPoints.length > 1) {
+    // Mapを適切な範囲にfit
+    var bounds = new google.maps.LatLngBounds(pathPoints[0],pathPoints[1]);
+    for (var i = 2 , len = pathPoints.length ; i < len ; i++) {
+      bounds.extend(pathPoints[i]);
+    }
+    map.fitBounds(bounds);
+    // Pathを描画
+    var path = new google.maps.Polyline({
+      path: pathPoints,
+      strokeColor: "#FF0000",
+      strokeOpacity: 1.0,
+      strokeWeight: 2
+    });
+    path.setMap(map);
+  } else if (pathPoints.length == 1) {
+    map.setCenter(pathPoints[0]);
+    new google.maps.Marker({
+      position : pathPoints[0],
+      map: map
+    }); 
+  }  
+});
+</script>
+{% endblock %}
+
+{% block contents %}
+<div id="map"></div>
+{% endblock %}

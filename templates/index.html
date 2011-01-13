@@ -1,0 +1,85 @@
+{% extends "wrapper.html" %}
+
+{% block title %}
+{% endblock %}
+
+{% block meta %}
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+{% endblock %}
+
+{% block sytle %}
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+google.load("maps","3", {"other_params":"sensor=true"});
+$(function(){
+  var myOptions = {
+    zoom: 15,
+    center: new google.maps.LatLng(35.68,139.76),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  var map = new google.maps.Map(document.getElementById("map"),myOptions); 
+  
+  // geolocationオブジェクトを生成
+  var geolocation;
+  try {
+    if(typeof(navigator.geolocation) == 'undefined'){
+      geolocation = google.gears.factory.create('beta.geolocation');
+    } else {
+      geolocation = navigator.geolocation;
+    }
+  } catch(e) {}
+  if (!geolocation) {
+    alert('位置情報は利用できません');
+    return;
+  }
+
+  var watchId;
+  // 位置情報取得に成功したとき呼ばれるcallback関数
+  var success = function (position) {
+    if (position.coords.accuracy > 100) return;
+    var lat = position.coords.latitude;
+    var lon = position.coords.longitude;
+    var latlng = new google.maps.LatLng(lat, lon);
+    map.setCenter(latlng);
+    var marker = new google.maps.Marker({
+        position: latlng, 
+        map: map
+    });
+    $.ajax({
+      type: "POST",
+      url: "/",
+      data: "lat=" + lat + "&lon=" + lon,
+      success: function(msg){
+         var data = eval('(' + msg + ')');
+      }
+    });
+    google.maps.event.addListener(marker, 'click', function() {
+      map.setZoom(8);
+    });
+  } 
+  // 位置情報取得に失敗したとき呼ばれるcallback関数
+  var error = function (error) { }
+  // 位置情報取得時に設定するオプション
+  var option = {
+    enableHighAccuracy: true,
+    timeout : 10000, 
+    maximumAge: 0
+  };  
+  // 位置情報取得を開始する関数
+  function start() {
+    watchId = geolocation.watchPosition(success, error, option);
+  }
+  // 位置情報取得を停止する関数
+  function stop() {
+    geolocation.clearWatch(watchId);
+  }
+  start();
+});
+</script>
+{% endblock %}
+
+{% block contents %}
+<div id="map"></div>
+{% endblock %}
