@@ -30,7 +30,7 @@ class MainPage(webapp.RequestHandler):
       template_values = {
         'method' : 'post',
       }
-      self.response.headers['Content-Type'] = 'text/plain'
+      self.response.headers['Content-Type'] = 'application/json'
       self.response.out.write('{result:"OK", geohash:"' + hash + '"}')
 
 class HistoryPage(webapp.RequestHandler):
