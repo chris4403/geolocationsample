@@ -1,0 +1,110 @@
+{% extends "wrapper.html" %}
+
+{% block title %}
+{% endblock %}
+
+{% block meta %}
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+{% endblock %}
+
+{% block sytle %}
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript" charset="utf-8" src="/static/js/geohash.js"></script>
+<script type="text/javascript">
+google.load("maps","3", {"other_params":"sensor=true"});
+$(function(){
+  var myOptions = {
+    zoom: 18,
+    center: new google.maps.LatLng(35.68,139.76),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  var map = new google.maps.Map(document.getElementById("map"),myOptions); 
+  // geolocationオブジェクトを生成
+  var geolocation;
+  try {
+    if(typeof(navigator.geolocation) == 'undefined'){
+      geolocation = google.gears.factory.create('beta.geolocation');
+    } else {
+      geolocation = navigator.geolocation;
+    }
+  } catch(e) {}
+  if (!geolocation) {
+    alert('位置情報は利用できません');
+    return;
+  }
+  function showPolygon(geohash) {
+    console.log(geohash);
+    var data = decodeGeoHash(geohash);
+    var polygon = new google.maps.Polygon({
+      paths: [
+        new google.maps.LatLng(data.latitude[0],data.longitude[0]),
+        new google.maps.LatLng(data.latitude[1],data.longitude[0]),
+        new google.maps.LatLng(data.latitude[1],data.longitude[1]),
+        new google.maps.LatLng(data.latitude[0],data.longitude[1]),
+        new google.maps.LatLng(data.latitude[0],data.longitude[0])
+      ],  
+      strokeColor: "#00FF00",
+      strokeOpacity: 1.0,
+      strokeWeight: 1.0,
+      fillColor : "#00FF00",
+      fillOpacity : 0.1,
+      zIndex : 1000
+    });
+    polygon.setMap(map);
+  }
+  // 位置情報取得に成功したとき呼ばれるcallback関数
+  var success = function (position) {
+    var lat = position.coords.latitude;
+    var lon = position.coords.longitude;
+    var latlng = new google.maps.LatLng(lat, lon);
+    map.setCenter(latlng);
+
+    var geohashes = {};
+    geohashes.center = encodeGeoHash(lat, lon).substr(0,6);
+    geohashes.top = calculateAdjacent(geohashes.center, 'top');
+    geohashes.bottom = calculateAdjacent(geohashes.center, 'bottom');
+    geohashes.left = calculateAdjacent(geohashes.center, 'left');
+    geohashes.right = calculateAdjacent(geohashes.center, 'right');  
+    geohashes.topLeft = calculateAdjacent(geohashes.top, 'left');
+    geohashes.topRight = calculateAdjacent(geohashes.top, 'right');
+    geohashes.bottomLeft = calculateAdjacent(geohashes.bottom, 'left');
+    geohashes.bottomRight = calculateAdjacent(geohashes.bottom, 'right');
+    var swBlock = decodeGeoHash(geohashes.bottomLeft);
+    var neBlock = decodeGeoHash(geohashes.topRight);
+    var bounds = new google.maps.LatLngBounds(
+       new google.maps.LatLng(swBlock.latitude[0],swBlock.longitude[0]),
+       new google.maps.LatLng(neBlock.latitude[1],neBlock.longitude[1])
+    );
+    map.fitBounds(bounds);
+    for (var p in geohashes) {
+      showPolygon(geohashes[p]);
+    }
+    return ;
+    $.ajax({
+      type: "POST",
+      url: "/",
+      data: "lat=" + lat + "&lon=" + lon,
+      success: function(msg){
+         var data = eval('(' + msg + ')');
+      }
+    });
+  } 
+
+  // 位置情報取得に失敗したとき呼ばれるcallback関数
+  var error = function (error) { }
+  // 位置情報取得時に設定するオプション
+  var option = {
+    enableHighAccuracy: true,
+    timeout : 10000, 
+    maximumAge: 0
+  };  
+  geolocation.getCurrentPosition(success, error, option);
+});
+</script>
+{% endblock %}
+
+{% block contents %}
+<div id="map"></div>
+{% endblock %}
